@@ -1,0 +1,24 @@
+# k8s-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-ws
+  namespace: smartpoli-dev
+  labels: 
+    app.kubernetes.io/name: chat-ws
+    app.kubernetes.io/instance: chat-ws-dev
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: websocket
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: chat-ws 
+    app.kubernetes.io/instance: chat-ws-dev
+  ports:
+    - name: websocket
+      protocol: TCP
+      port: 8765
+      targetPort: websocket

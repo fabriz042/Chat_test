@@ -1,0 +1,115 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smartpoli-ingress
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/instance: smartpoli-dev-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - host: smartpoli.local
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: django-api
+            port:
+              number: 8000
+      - path: /admin(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: django-api
+            port:
+              number: 8000
+      - path: /ws(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-ws
+            port:
+              number: 8765
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: nextjs-app
+            port:
+              number: 3000
+---
+# NetworkPolicy to allow traffic from Ingress to Django API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-django
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli-network
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: django-api
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: smartpoli-ingress
+  policyTypes:
+  - Ingress
+---
+# NetworkPolicy to allow traffic from Ingress to Next.js
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-nextjs
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli-network
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: nextjs-app
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: smartpoli-ingress
+  policyTypes:
+  - Ingress
+---
+# NetworkPolicy to allow traffic from Ingress to Websocket
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-websocket
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli-network
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: chat-ws
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/name: smartpoli-ingress
+  policyTypes:
+  - Ingress

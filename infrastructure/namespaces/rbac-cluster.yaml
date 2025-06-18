@@ -1,0 +1,113 @@
+---
+# ClusterRole for Platform Administrators
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: smartpoli-platform-admin
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    purpose: platform-management
+    team: platform-team
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
+---
+# ClusterRole for SmartPoli Developers
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: smartpoli-developer
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    purpose: development
+    team: police-tech
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+  resourceNames: ["smartpoli-dev", "shared-services"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+---
+# ClusterRole for SmartPoli Operators
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: smartpoli-operator
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    purpose: operations
+    team: police-tech
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+  resourceNames: ["smartpoli-prod", "smartpoli-dev", "shared-services", "monitoring"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list", "watch"]
+---
+# ClusterRoleBinding for Platform Admins
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-admin-binding
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+subjects:
+- kind: Group
+  name: platform-admins
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: smartpoli-platform-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRoleBinding for SmartPoli Developers
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: smartpoli-developer-binding
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+subjects:
+- kind: Group
+  name: smartpoli-developers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: smartpoli-developer
+  apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRoleBinding for SmartPoli Operators
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: smartpoli-operator-binding
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+subjects:
+- kind: Group
+  name: smartpoli-operators
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: smartpoli-operator
+  apiGroup: rbac.authorization.k8s.io

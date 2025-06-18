@@ -1,0 +1,104 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: dev
+    purpose: application
+    team: police-tech
+    security-level: high
+    compliance: government
+---
+# Resource Quota for Development Environment - Optimized for small VPS
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: smartpoli-dev-quota
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+spec:
+  hard:
+    requests.cpu: "1500m"    # 1.5 CPU cores
+    requests.memory: 2Gi     # 2GB RAM
+    limits.cpu: "3"          # Max 3 CPU cores
+    limits.memory: 4Gi       # Max 4GB RAM
+    persistentvolumeclaims: "3"
+    pods: "9"                # Maximum 9 pods
+    services: "6"
+    secrets: "8"
+    configmaps: "10"
+---
+# Network Policy - Default Deny All
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+# RBAC for Developers - Namespace specific access
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: smartpoli-dev-sa
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: smartpoli-dev-role
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: smartpoli-dev-rolebinding
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: smartpoli
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+subjects:
+- kind: ServiceAccount
+  name: smartpoli-dev-sa
+  namespace: smartpoli-dev
+- kind: Group
+  name: smartpoli-developers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: smartpoli-dev-role
+  apiGroup: rbac.authorization.k8s.io

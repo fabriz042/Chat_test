@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra-ingress
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: shared
+    purpose: ingress-controllers
+    team: platform-team
+    security-level: high
+---
+# Resource Quota for Ingress Controllers - Optimized for small VPS
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: infra-ingress-quota
+  namespace: infra-ingress
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+spec:
+  hard:
+    requests.cpu: "500m"     # 0.5 CPU
+    requests.memory: 1Gi     # 1GB RAM
+    limits.cpu: "1"          # Max 1 CPU
+    limits.memory: 2Gi       # Max 2GB RAM
+    pods: "4"                # Nginx + Caddy
+    services: "4"
+    secrets: "5"             # TLS certs
+    configmaps: "5"
+---
+# RBAC for Platform Admins - Ingress Management
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-admin-sa
+  namespace: infra-ingress
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-admin-role
+  namespace: infra-ingress
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "services", "configmaps", "secrets", "endpoints", "nodes"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "ingressclasses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-admin-rolebinding
+  namespace: infra-ingress
+  labels:
+    app.kubernetes.io/name: smartpoli-ingress
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+subjects:
+- kind: ServiceAccount
+  name: ingress-admin-sa
+  namespace: infra-ingress
+- kind: Group
+  name: platform-admins
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: ingress-admin-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,113 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/managed-by: kubectl
+    environment: shared
+    purpose: common-services
+    team: platform-team
+    security-level: high
+---
+# Resource Quota for Shared Services - Optimized for small VPS
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: shared-services-quota
+  namespace: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+spec:
+  hard:
+    requests.cpu: "1000m"    # 1 CPU
+    requests.memory: 1.5Gi   # 1.5GB RAM
+    limits.cpu: "2"          # Max 2 CPU
+    limits.memory: 3Gi       # Max 3GB RAM
+    persistentvolumeclaims: "3"
+    pods: "6"                # Auth, Email, etc.
+    services: "4"
+    secrets: "8"
+    configmaps: "10"
+---
+# Network Policy - Allow Internal Access Only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-only
+  namespace: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: smartpoli-platform
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          app.kubernetes.io/part-of: smartpoli-platform
+---
+# RBAC for Service Admins
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shared-services-admin-sa
+  namespace: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: shared-services-admin-role
+  namespace: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "services", "configmaps", "secrets", "endpoints"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: shared-services-admin-rolebinding
+  namespace: shared-services
+  labels:
+    app.kubernetes.io/name: smartpoli-shared
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: shared
+subjects:
+- kind: ServiceAccount
+  name: shared-services-admin-sa
+  namespace: shared-services
+- kind: Group
+  name: platform-admins
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: shared-services-admin-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextjs-config
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: nextjs-app
+    app.kubernetes.io/instance: nextjs-app-dev
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/component: frontend
+    environment: dev
+data:
+  NEXT_PUBLIC_API_URL: "http://django-api:8000/api"
+  NEXT_PUBLIC_WEBSOCKET_URL: "ws://chat-ws:8765"
+  NODE_ENV: "development"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-app
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: nextjs-app
+    app.kubernetes.io/instance: nextjs-app-dev
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/component: frontend
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nextjs-app
+      app.kubernetes.io/instance: nextjs-app-dev
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nextjs-app
+        app.kubernetes.io/instance: nextjs-app-dev
+        app.kubernetes.io/version: "1.0.0"
+        app.kubernetes.io/part-of: smartpoli-platform
+        app.kubernetes.io/component: frontend
+        environment: dev
+    spec:
+      containers:
+      - name: nextjs-app
+        image: node:16-alpine
+        command: ['sh', '-c', 'npm install && npm run dev']
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: nextjs-config
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "400m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-app
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: nextjs-app
+    app.kubernetes.io/instance: nextjs-app-dev
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/part-of: smartpoli-platform
+    app.kubernetes.io/component: frontend
+    environment: dev
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: nextjs-app
+    app.kubernetes.io/instance: nextjs-app-dev
