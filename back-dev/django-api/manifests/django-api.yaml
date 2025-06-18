@@ -71,9 +71,23 @@ spec:
       - name: wait-for-db
         image: busybox:1.34
         command: ['sh', '-c', 'until nc -z postgresql 5432; do echo waiting for postgresql; sleep 2; done;']
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
       - name: migrations
         image: python:3.10-slim
         command: ['sh', '-c', 'pip install -U pip && pip install django psycopg2-binary && python manage.py migrate']
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
         envFrom:
         - configMapRef:
             name: django-config

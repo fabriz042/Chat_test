@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: chat-ws
+  namespace: smartpoli-dev
+  labels:
+    app.kubernetes.io/name: chat-ws
+    app.kubernetes.io/instance: chat-ws-dev
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: websocket
+    app.kubernetes.io/part-of: smartpoli-platform
+    environment: dev
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chat-ws
+      app.kubernetes.io/instance: chat-ws-dev
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chat-ws
+        app.kubernetes.io/instance: chat-ws-dev
+        app.kubernetes.io/version: "1.0.0"
+        app.kubernetes.io/component: websocket
+        app.kubernetes.io/part-of: smartpoli-platform
+        environment: dev
+
+    spec:
+      containers:
+      - name: chat-ws
+        image: fabriz042/chat-ws:v1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8765
+          name: websocket
+        env:
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: DJANGO_API_URL
+          value: "http://django-api:8000/api"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          tcpSocket:
+            port: websocket
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: websocket
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
