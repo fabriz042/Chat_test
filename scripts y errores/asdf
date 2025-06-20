@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Script para configurar WireGuard en worker nodes de Kubernetes
+set -e
+
+echo "=== Configuración de WireGuard para Worker Node ==="
+
+# Actualizar sistema e instalar WireGuard
+echo "Actualizando sistema e instalando WireGuard..."
+sudo apt update
+sudo apt install wireguard -y
+
+# Configurar permisos seguros
+umask 077
+
+# Generar claves
+echo "Generando claves WireGuard..."
+wg genkey | tee /tmp/privatekey | wg pubkey > /tmp/publickey
+
+# Mostrar clave pública
+echo "================================"
+echo "CLAVE PÚBLICA DE ESTE WORKER:"
+cat /tmp/publickey
+echo "================================"
+
+# Solicitar clave pública del nodo maestro
+echo ""
+read -p "Ingresa la clave pública del nodo maestro: " CLAVE_PUBLICA_MASTER
+read -p "Ingresa la IP pública del nodo maestro: " IP_PUBLICA_MASTER
+
+# Leer clave privada
+CLAVE_PRIVADA=$(cat /tmp/privatekey)
+
+# Crear configuración de WireGuard
+echo "Creando configuración WireGuard..."
+sudo tee /etc/wireguard/wg0.conf > /dev/null <<EOF
+[Interface]
+PrivateKey = $CLAVE_PRIVADA
+Address = 10.10.0.2/24
+ListenPort = 51820
+
+[Peer]
+PublicKey = $CLAVE_PUBLICA_MASTER
+AllowedIPs = 10.10.0.0/24
+Endpoint = $IP_PUBLICA_MASTER:51820
+PersistentKeepalive = 25
+EOF
+
+# Limpiar archivos temporales
+rm -f /tmp/privatekey /tmp/publickey
+
+# Habilitar y iniciar el servicio
+echo "Habilitando y iniciando WireGuard..."
+sudo systemctl enable wg-quick@wg0
+sudo systemctl start wg-quick@wg0
+
+# Verificar estado
+echo "Verificando estado de WireGuard..."
+sudo wg show
+
+echo "=== Configuración completada ==="
+echo "Worker configurado con IP: 10.10.0.2"
+echo "Para múltiples workers, modifica la dirección IP en Address"
